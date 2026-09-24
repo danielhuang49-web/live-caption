@@ -131,7 +131,7 @@
   #muteHint{max-width:34em}
 
   /* ===== 投影模式 ===== */
-  #presentBtn{border:1.5px solid #000;padding:12.5px 24px;font-weight:500;letter-spacing:.08em}
+  .present-btn{border:1.5px solid #000;padding:12.5px 24px;font-weight:500;letter-spacing:.08em}
   .present-bar,.present-ctl{display:none}
   body.present nav, body.present main{display:none}
   body.present{min-height:100vh}
@@ -139,6 +139,10 @@
   .pb-row{display:flex;justify-content:space-between;align-items:baseline;gap:24px;flex-wrap:wrap}
   .pb-zh{font-family:var(--serif);font-weight:700;letter-spacing:.2em;font-size:clamp(1.8rem,4.2vw,3.4rem);line-height:1.1}
   .pb-en{font-family:"Jost",sans-serif;font-weight:500;letter-spacing:.14em;font-size:clamp(1.2rem,2.6vw,2.1rem)}
+  .pb-en-big{font-family:"Jost",sans-serif;font-weight:600;letter-spacing:.1em;font-size:clamp(1.8rem,4.2vw,3.4rem);line-height:1.1}
+  .pb-zh-small{font-family:var(--serif);font-weight:700;letter-spacing:.2em;font-size:clamp(1.2rem,2.6vw,2.1rem)}
+  body.present-zh .lang-en, body.present-en .lang-zh{display:none}
+  .pc-hint{font-weight:500}
   .pb-sub{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-top:10px;font-size:clamp(.8rem,1.1vw,1rem);color:var(--muted)}
   .pb-meter{position:relative;height:4px;margin-top:14px;overflow:hidden;
     background:linear-gradient(90deg,var(--noise) 0%,var(--noise) 28%,var(--ok) 38%,var(--ok) 62%,#9bbf3a 72%,var(--warn) 84%,var(--hot) 97%)}
@@ -158,17 +162,24 @@
 </head>
 <body>
 <div class="present-bar" aria-hidden="true">
-  <div class="pb-row">
+  <div class="pb-row lang-zh">
     <div class="pb-zh">現場即時翻譯</div>
     <div class="pb-en">Live Translation</div>
   </div>
-  <div class="pb-sub"><span>中文 ⇄ English</span><span>字幕由 AI 即時產生，僅供參考 · AI-generated captions, for reference only</span></div>
+  <div class="pb-sub lang-zh"><span>English → 中文</span><span>字幕由 AI 即時產生，僅供參考</span></div>
+  <div class="pb-row lang-en">
+    <div class="pb-en-big">Live Translation</div>
+    <div class="pb-zh-small">現場即時翻譯</div>
+  </div>
+  <div class="pb-sub lang-en"><span>中文 → English</span><span>AI-generated captions, for reference only</span></div>
   <div class="pb-meter"><div class="meter-cover" id="miniFill"></div></div>
 </div>
 <div class="present-ctl">
   <span class="pc-dot"></span>
+  <span class="pc-hint lang-zh">ViiTor 請設 EN → ZH</span>
+  <span class="pc-hint lang-en">ViiTor 請設 ZH → EN</span>
   <button type="button" id="pcMute">暫停送出（M）</button>
-  <button type="button" id="pcExit">離開投影模式（P）</button>
+  <button type="button" id="pcExit">離開投影（Esc）</button>
 </div>
 <nav aria-label="頁面導覽">
   <a href="#top">收音</a><a href="#settings">設定</a><a href="#flow">流程</a>
@@ -191,7 +202,8 @@
         <button id="startBtn">開始收音</button>
         <button id="stopBtn" disabled>停止</button>
         <button id="muteBtn" type="button" disabled>暫停送出（M）</button>
-        <button id="presentBtn" type="button">投影模式（P）</button>
+        <button id="presentZh" class="present-btn" type="button">中文投影（P）</button>
+        <button id="presentEn" class="present-btn" type="button">英文投影（E）</button>
       </div>
       <span class="hint" id="muteHint">暫停送出時仍在收音、音量條照常顯示，但 ViiTor 聽到的是靜音，不會產生字幕。按鍵盤 M 可快速切換。</span>
       <p class="status err" id="fileWarn" hidden>目前是直接打開本機檔案（file://），抓不到裝置名稱。請改用網址 <a href="https://danielhuang49-web.github.io/live-caption/">https://danielhuang49-web.github.io/live-caption/</a> 開啟（或 http://localhost 備案，做法見下方流程）。</p>
@@ -329,7 +341,12 @@
         <li>語言設為「Auto Detect」，讓 ViiTor 自動判斷中英文；若誤判嚴重，再改成手動指定方向（英文演講 EN → ZH，中文演講 ZH → EN）。</li>
         <li>確認「把畫面上的簡體字幕轉成繁體」已勾選。</li>
         <li>說幾句話，確認字幕正常出現、沒有漏字。若句首常被吃掉，把「壓制強度」改成「標準」，或把「雜音門檻」往左調低。</li>
-        <li>按「投影模式」或鍵盤 P，頁面會進入全螢幕，只留上方的中英標題，讓 ViiTor 字幕顯示在乾淨的背景上。</li>
+        <li>依講者語言選投影模式，頁面會進入全螢幕，只留上方標題，讓 ViiTor 字幕顯示在乾淨的背景上：
+          <ul>
+            <li><b>中文投影（P）</b>：英文演講用。ViiTor 設 EN → ZH，標題以中文為主。</li>
+            <li><b>英文投影（E）</b>：中文演講用。ViiTor 設 ZH → EN，標題以英文為主。</li>
+          </ul>
+          投影中按另一個鍵可以直接切換；右下角會提醒 ViiTor 該設哪個方向（這個頁面無法幫你切換 ViiTor）。</li>
       </ol>
     </details>
 
@@ -346,7 +363,7 @@
     <details>
       <summary>會後：結束</summary>
       <ol>
-        <li>按 P 或 Esc 離開投影模式，按「停止」結束收音，關閉 ViiTor 字幕視窗。</li>
+        <li>按 Esc 離開投影模式，按「停止」結束收音，關閉 ViiTor 字幕視窗。</li>
         <li>若使用 localhost 備案，回到終端機按 Ctrl+C 關閉。</li>
       </ol>
     </details>
@@ -633,23 +650,29 @@ function togglePause(){
 }
 $('muteBtn').addEventListener('click', togglePause);
 // ===== 投影模式 =====
-function setPresent(on){
+// mode: 'zh' = 英翻中，畫面以中文為主；'en' = 中翻英，畫面以英文為主；null = 離開
+function setPresent(mode){
+  const on = !!mode;
   document.body.classList.toggle('present', on);
-  $('presentBtn').textContent = '投影模式（P）';
+  document.body.classList.toggle('present-zh', mode==='zh');
+  document.body.classList.toggle('present-en', mode==='en');
   if (on && document.documentElement.requestFullscreen && !document.fullscreenElement){ document.documentElement.requestFullscreen().catch(()=>{}); }
   if (!on && document.fullscreenElement){ document.exitFullscreen().catch(()=>{}); }
 }
-$('presentBtn').addEventListener('click', ()=>setPresent(true));
-$('pcExit').addEventListener('click', ()=>setPresent(false));
+$('presentZh').addEventListener('click', ()=>setPresent('zh'));
+$('presentEn').addEventListener('click', ()=>setPresent('en'));
+$('pcExit').addEventListener('click', ()=>setPresent(null));
 $('pcMute').addEventListener('click', ()=>togglePause());
 window.addEventListener('keydown', e=>{
   const el = document.activeElement;
   if (el && (el.tagName==='TEXTAREA' || (el.tagName==='INPUT' && el.type==='text') || el.isContentEditable)) return;
   if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
-  if (e.code==='KeyP'){ if (el && el.tagName==='SELECT') el.blur(); e.preventDefault(); setPresent(!document.body.classList.contains('present')); }
-  else if (e.key==='Escape' && document.body.classList.contains('present')) setPresent(false);
+  // 按同一個鍵離開；在另一種投影中按則直接切換
+  const mode = e.code==='KeyP' ? 'zh' : e.code==='KeyE' ? 'en' : null;
+  if (mode){ if (el && el.tagName==='SELECT') el.blur(); e.preventDefault(); setPresent(document.body.classList.contains('present-'+mode) ? null : mode); }
+  else if (e.key==='Escape' && document.body.classList.contains('present')) setPresent(null);
 }, true);
-document.addEventListener('fullscreenchange', ()=>{ if (!document.fullscreenElement && document.body.classList.contains('present')) document.body.classList.remove('present'); });
+document.addEventListener('fullscreenchange', ()=>{ if (!document.fullscreenElement && document.body.classList.contains('present')) setPresent(null); });
 
 window.addEventListener('keydown', e=>{
   // 用實體按鍵位置判斷，中文輸入法（注音、倉頡）開著時也有效
