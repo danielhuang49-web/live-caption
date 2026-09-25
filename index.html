@@ -6,7 +6,7 @@
 <title>現場收音回放器</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500&family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500&family=Montserrat:wght@600;700&family=Nunito+Sans:wght@400;600;800&family=Libre+Caslon+Text:wght@400&family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#c9e8d2;          /* 馬卡龍綠 */
@@ -158,6 +158,88 @@
     .hero{min-height:88vh}
   }
   @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.meter-cover{transition:none}}
+
+  /* ===== Weed Day 風格：深炭灰底、鏽紅重點、點線框、字距拉開的英文大寫 ===== */
+  :root{
+    --bg:#2b2b2b; --ink:#d5d5d5; --muted:#9a948f; --rust:#8d4e33; --rust-hi:#b8704f;
+    --line:rgba(255,255,255,.1); --track:#3a3a3a; --noise:#6f7d86; --ok:#5e9a6e; --warn:#d08a3a; --hot:#c8553f;
+    --caps:"Montserrat","Nunito Sans","Noto Sans TC",sans-serif;
+    --sans:"Nunito Sans","Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  }
+  html,body{background:var(--bg);color:var(--ink)}
+  ::selection{background:var(--rust);color:#fff}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  a{color:var(--rust-hi)}
+
+  .topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;padding:18px var(--gut) 0 clamp(16px,2.4vw,24px)}
+  .logo{display:flex;gap:12px;text-decoration:none;color:var(--rust)}
+  .logo-v{display:flex;flex-direction:column;font-family:var(--serif);font-size:.82rem;line-height:1.55;padding-top:2px}
+  .logo-en{font-family:"Libre Caslon Text",Georgia,serif;font-size:clamp(1.7rem,2.6vw,2.1rem);line-height:1.05;letter-spacing:.01em}
+  nav{padding:24px 0 0;gap:clamp(20px,4.5vw,46px);font-family:var(--caps);font-weight:700;font-size:.85rem;letter-spacing:.02em}
+  nav a{color:var(--ink);text-decoration:none!important;transition:color .2s}
+  nav a:hover,nav a:first-child{color:var(--rust-hi)}
+  body.present .topbar{display:none}
+
+  .hero{min-height:max(560px,min(84vh,760px))}
+  .meter-wrap{right:var(--gut);top:36%}
+  .meter{height:clamp(56px,9vh,96px)}
+  .ticks{color:var(--muted);font-family:var(--caps);font-size:.72rem;letter-spacing:.06em}
+  .status{text-decoration:none;font-size:1.1rem;color:var(--ink)}
+  .status::before{background:var(--ink)}
+  .status.err{color:var(--hot)}
+  .diag{color:var(--muted)}
+
+  button{color:var(--ink);font-family:var(--caps);font-weight:600;letter-spacing:.12em}
+  #startBtn{background:var(--rust);color:#f3ebe6;padding:13px 30px;font-weight:700;letter-spacing:.16em;font-size:.95rem;transition:background .2s}
+  #startBtn:hover:not(:disabled){background:var(--rust-hi)}
+  #stopBtn,#muteBtn,.present-btn{border:1px dotted var(--rust-hi);padding:11px 20px;font-size:.88rem;font-weight:600;letter-spacing:.1em;color:var(--ink);transition:color .2s,border-color .2s}
+  #stopBtn:hover:not(:disabled),#muteBtn:hover:not(:disabled),.present-btn:hover{color:var(--rust-hi);border-style:solid}
+  #muteBtn.on{background:var(--warn);border-color:var(--warn);color:#1e1e1e}
+  #calBtn{color:var(--rust-hi);font-size:.88rem}
+  :focus-visible{outline:2px solid var(--rust-hi)}
+
+  .band-set,.band-flow{background:var(--bg)}
+  .band{border-top:1px solid var(--line)}
+  .sec-title{display:flex;flex-direction:column;gap:2px;font-family:var(--caps);color:var(--rust-hi);margin-bottom:10px}
+  .sec-title .en{font-size:clamp(1.1rem,1.8vw,1.35rem);font-weight:700;letter-spacing:.2em}
+  .sec-title .zh{font-family:var(--sans);font-size:.95rem;font-weight:400;letter-spacing:.12em;color:var(--rust)}
+  .sec-lead{color:var(--muted)}
+  .group{background:transparent;box-shadow:none;border:1px dotted rgba(184,112,79,.55);padding:26px clamp(18px,3vw,36px) 6px}
+  .group-title{font-family:var(--sans);font-size:1.1rem;letter-spacing:.12em;color:var(--ink)}
+  .group-title .num{font-family:var(--caps);font-weight:700;color:var(--rust-hi);font-size:.85rem;letter-spacing:.14em}
+  .field,.group .field{border-top:1px solid var(--line)}
+  .group .field:last-child{border-bottom:0}
+  .hint{color:var(--muted)}
+  .gainval{color:var(--rust-hi);font-family:var(--caps);font-size:.85rem}
+  select{border-bottom-color:var(--ink);color:var(--ink);
+    background-image:linear-gradient(45deg,transparent 50%,var(--ink) 50%),linear-gradient(135deg,var(--ink) 50%,transparent 50%)}
+  select option{background:#2b2b2b;color:var(--ink)}
+  input[type=range]{accent-color:var(--rust-hi)}
+  .check input{border-color:var(--ink)}
+  .check input:checked{border-color:var(--rust-hi)}
+  .check input:checked::after{background:var(--rust-hi)}
+
+  .guide details,.guide details:last-child{border-color:var(--line)}
+  .guide summary{font-weight:600;letter-spacing:.06em}
+  .guide summary::after{color:var(--rust-hi)}
+  .guide li::marker{color:var(--rust-hi);font-family:var(--caps)}
+  .guide dt{color:var(--ink)}
+  .guide code{background:rgba(255,255,255,.07);color:#e8d9cf}
+
+  body.present .present-bar{background:var(--bg)}
+  .pb-zh,.pb-zh-small{color:var(--rust-hi)}
+  .pb-en,.pb-en-big{font-family:var(--caps);color:var(--ink)}
+  .pb-en-big{font-weight:700;letter-spacing:.14em}
+  .pb-sub{color:var(--muted)}
+  .pc-dot{background:var(--ink)}
+  .present-ctl button{color:var(--ink)}
+  @media (max-width:760px){
+    .topbar{flex-direction:column;gap:6px;padding-left:var(--gut)}
+    nav{padding-top:10px;justify-content:flex-start}
+    .hero{min-height:0;padding-top:36px;padding-bottom:48px}
+    .meter-wrap,.caption{position:static;transform:none;max-width:none}
+    .caption{margin-top:36px}
+  }
 </style>
 </head>
 <body>
@@ -181,14 +263,19 @@
   <button type="button" id="pcMute">暫停送出（M）</button>
   <button type="button" id="pcExit">離開投影（Esc）</button>
 </div>
+<header class="topbar">
+  <a class="logo" href="#top" aria-label="現場收音回放器">
+    <span class="logo-v" aria-hidden="true"><span>現</span><span>場</span><span>收</span><span>音</span></span>
+    <span class="logo-en">Live<br>Caption</span>
+  </a>
 <nav aria-label="頁面導覽">
-  <a href="#top">收音</a><a href="#settings">設定</a><a href="#flow">流程</a>
+  <a href="#top">LISTEN</a><a href="#settings">SETTINGS</a><a href="#flow">GUIDE</a>
 </nav>
+</header>
 
 <main>
   <header class="hero" id="top">
-    <h1 class="wordmark">現場收音</h1>
-    <p class="vertical" aria-hidden="true"><span>回</span><span>放</span><span>器</span></p>
+    <h1 class="sr-only">現場收音回放器</h1>
 
     <section class="meter-wrap" aria-label="音量">
       <div class="meter"><div class="meter-cover" id="fill"></div></div>
@@ -212,7 +299,7 @@
 
   <div class="content">
     <section id="settings" class="band band-set" aria-labelledby="setTitle">
-      <h2 class="sec-title" id="setTitle">設定</h2>
+      <h2 class="sec-title" id="setTitle"><span class="en">SETTINGS</span><span class="zh">設定</span></h2>
       <p class="sec-lead">會前依 01 到 03 的順序調整一次，會議中通常不需要再動。</p>
 
 
@@ -311,7 +398,7 @@
     </section>
 
   <section class="guide band band-flow" id="flow" aria-labelledby="guideTitle">
-    <h2 id="guideTitle" class="sec-title">操作流程</h2>
+    <h2 id="guideTitle" class="sec-title"><span class="en">GUIDE</span><span class="zh">操作流程</span></h2>
     <p class="sec-lead">依照順序操作；出問題時先看最後一段。</p>
 
     <details open>
