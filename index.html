@@ -256,22 +256,20 @@
 <div class="present-bar" aria-hidden="true">
   <div class="pb-row lang-zh">
     <div class="pb-zh">現場即時翻譯</div>
-    <div class="pb-en">Live Translation</div>
   </div>
-  <div class="pb-sub lang-zh"><span>English → 中文</span><span>字幕由 AI 即時產生，僅供參考</span></div>
+  <div class="pb-sub lang-zh"><span>英文 → 中文</span><span>字幕由 AI 即時產生，僅供參考</span></div>
   <div class="pb-row lang-en">
     <div class="pb-en-big">Live Translation</div>
-    <div class="pb-zh-small">現場即時翻譯</div>
   </div>
-  <div class="pb-sub lang-en"><span>中文 → English</span><span>AI-generated captions, for reference only</span></div>
+  <div class="pb-sub lang-en"><span>Chinese → English</span><span>AI-generated captions, for reference only</span></div>
   <div class="pb-meter"><div class="meter-cover" id="miniFill"></div></div>
 </div>
 <div class="present-ctl">
   <span class="pc-dot"></span>
   <span class="pc-hint lang-zh">ViiTor 請設 EN → ZH</span>
-  <span class="pc-hint lang-en">ViiTor 請設 ZH → EN</span>
+  <span class="pc-hint lang-en">Set ViiTor to ZH → EN</span>
   <button type="button" id="pcMute">暫停送出（M）</button>
-  <button type="button" id="pcExit">離開投影（Esc）</button>
+  <button type="button" id="pcExit"><span class="lang-zh">離開投影（Esc）</span><span class="lang-en">Exit (Esc)</span></button>
 </div>
 <header class="topbar">
   <a class="logo" href="#top" aria-label="現場收音回放器">
@@ -440,8 +438,8 @@
         <li>說幾句話，確認字幕正常出現、沒有漏字。若句首常被吃掉，把「壓制強度」改成「標準」，或把「雜音門檻」往左調低。</li>
         <li>依講者語言選投影模式，頁面會進入全螢幕，只留上方標題，讓 ViiTor 字幕顯示在乾淨的背景上：
           <ul>
-            <li><b>中文投影（P）</b>：英文演講用。ViiTor 設 EN → ZH，標題以中文為主，綠色。</li>
-            <li><b>英文投影（E）</b>：中文演講用。ViiTor 設 ZH → EN，標題以英文為主，紅色。</li>
+            <li><b>中文投影（P）</b>：英文演講用。ViiTor 設 EN → ZH，畫面只有中文，綠色。</li>
+            <li><b>英文投影（E）</b>：中文演講用。ViiTor 設 ZH → EN，畫面只有英文，紅色。</li>
           </ul>
           投影中按另一個鍵可以直接切換；右下角會提醒 ViiTor 該設哪個方向（這個頁面無法幫你切換 ViiTor）。</li>
       </ol>
@@ -730,7 +728,7 @@ function renderPause(){
   const b = $('muteBtn');
   b.classList.toggle('on', paused);
   b.textContent = paused ? '恢復送出（M）' : '暫停送出（M）';
-  const pm = document.getElementById('pcMute'); if (pm) pm.textContent = b.textContent;
+  const pm = document.getElementById('pcMute'); if (pm) pm.textContent = document.body.classList.contains('present-en') ? (paused ? 'Resume (M)' : 'Pause (M)') : b.textContent;
   document.body.classList.toggle('live', !!stream && !paused);
   document.body.classList.toggle('paused', paused);
   if (stream) document.title = (paused ? '⏸ 暫停｜' : '🔴 送出中｜') + baseTitle;
@@ -749,6 +747,7 @@ function setPresent(mode){
   document.body.classList.toggle('present', on);
   document.body.classList.toggle('present-zh', mode==='zh');
   document.body.classList.toggle('present-en', mode==='en');
+  renderPause();
   if (on && document.documentElement.requestFullscreen && !document.fullscreenElement){ document.documentElement.requestFullscreen().catch(()=>{}); }
   if (!on && document.fullscreenElement){ document.exitFullscreen().catch(()=>{}); }
 }
