@@ -233,6 +233,16 @@
   .pb-sub{color:var(--muted)}
   .pc-dot{background:var(--ink)}
   .present-ctl button{color:var(--ink)}
+  /* 兩種投影用顏色區分：翻成中文＝綠，翻成英文＝紅 */
+  :root{--to-zh:#6fb583; --to-en:#d9604a}
+  #presentZh{border-color:var(--to-zh);color:var(--to-zh)}
+  #presentEn{border-color:var(--to-en);color:var(--to-en)}
+  #presentZh:hover{color:#8fd0a1} #presentEn:hover{color:#ee7c66}
+  body.present-zh .present-bar{border-top:6px solid var(--to-zh)}
+  body.present-en .present-bar{border-top:6px solid var(--to-en)}
+  body.present-zh .pb-zh, body.present-zh .pb-sub span:first-child, body.present-zh .pc-hint{color:var(--to-zh)}
+  body.present-en .pb-en-big, body.present-en .pb-sub span:first-child, body.present-en .pc-hint{color:var(--to-en)}
+  body.present-en .pb-zh-small{color:var(--ink)}
   @media (max-width:760px){
     .topbar{flex-direction:column;gap:6px;padding-left:var(--gut)}
     nav{padding-top:10px;justify-content:flex-start}
@@ -430,8 +440,8 @@
         <li>說幾句話，確認字幕正常出現、沒有漏字。若句首常被吃掉，把「壓制強度」改成「標準」，或把「雜音門檻」往左調低。</li>
         <li>依講者語言選投影模式，頁面會進入全螢幕，只留上方標題，讓 ViiTor 字幕顯示在乾淨的背景上：
           <ul>
-            <li><b>中文投影（P）</b>：英文演講用。ViiTor 設 EN → ZH，標題以中文為主。</li>
-            <li><b>英文投影（E）</b>：中文演講用。ViiTor 設 ZH → EN，標題以英文為主。</li>
+            <li><b>中文投影（P）</b>：英文演講用。ViiTor 設 EN → ZH，標題以中文為主，綠色。</li>
+            <li><b>英文投影（E）</b>：中文演講用。ViiTor 設 ZH → EN，標題以英文為主，紅色。</li>
           </ul>
           投影中按另一個鍵可以直接切換；右下角會提醒 ViiTor 該設哪個方向（這個頁面無法幫你切換 ViiTor）。</li>
       </ol>
