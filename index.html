@@ -322,6 +322,15 @@
           </div>
         </div>
         <div class="field">
+          <div class="k"><label for="in2Sel">第二輸入來源</label><span class="gainval" id="gain2Val">100%</span></div>
+          <div class="v">
+            <select id="in2Sel" disabled><option value="">不使用</option></select>
+            <input type="range" id="gain2" min="0" max="200" value="100" step="5" style="margin-top:14px" aria-label="第二輸入來源音量">
+            <span class="hint">想同時用兩支麥克風時才選，兩邊的聲音會混在一起送出。兩支要相隔 4 公尺以上、各收各的區域（例如一支放講台、一支放教室中間）；放太近聲音會變糊。滑桿調整第二來源的音量。</span>
+            <span class="hint" id="in2Msg" hidden></span>
+          </div>
+        </div>
+        <div class="field">
           <div class="k"><label for="gain">音量放大</label><span class="gainval" id="gainVal">100%</span></div>
           <div class="v">
             <input type="range" id="gain" min="0" max="300" value="100" step="5">
@@ -421,7 +430,7 @@
     <details>
       <summary>會前：調整收音</summary>
       <ol>
-        <li>「輸入來源」選實際要用的麥克風。名稱帶有 Virtual 的是軟體虛擬裝置，不要選；藍牙耳機的麥克風音質差，也不建議。</li>
+        <li>「輸入來源」選實際要用的麥克風；要同時用兩支時，另一支選在「第二輸入來源」，並分別對兩支說話，確認上方狀態列兩邊的音量數字都會動。名稱帶有 Virtual 的是軟體虛擬裝置，不要選；藍牙耳機的麥克風音質差，也不建議。</li>
         <li>使用一般麥克風時，「關閉瀏覽器的降噪與自動音量」不要勾選。</li>
         <li>確認「人聲加強」已勾選，「壓制強度」先用「強」，按「自動測量背景雜音」並保持安靜 3 秒。</li>
         <li>對著麥克風說話：安靜時音量條應停在灰藍色區，說話時延伸進綠色區。</li>
@@ -487,7 +496,7 @@
 
 <script>
 const $ = id => document.getElementById(id);
-const fill=$('fill'), statusEl=$('status'), inSel=$('inSel'), outSel=$('outSel'),
+const fill=$('fill'), statusEl=$('status'), inSel=$('inSel'), in2Sel=$('in2Sel'), gain2El=$('gain2'), in2Msg=$('in2Msg'), outSel=$('outSel'),
       rawChk=$('rawChk'), gainEl=$('gain'), gainVal=$('gainVal'), player=$('player'),
       startBtn=$('startBtn'), stopBtn=$('stopBtn');
 
@@ -539,6 +548,7 @@ let gateNode = null, calibrating = null, sendNode = null, paused = false;
 const baseTitle = document.title;
 if (location.protocol==='file:') document.getElementById('fileWarn').hidden=false;
 let diagTimer;
+let stream2 = null, gain2Node = null, analyser2 = null, lastDb2 = -120;
 let ctx, stream, gainNode, analyser, raf, wakeLock, silentSince = 0, warned = false, lastDb = -120, shown = 0;
 
 function setStatus(text, cls){ statusEl.textContent=text; statusEl.className='status '+cls; }
@@ -563,6 +573,10 @@ async function listDevices(){
   if (usable.some(d=>d.deviceId===keepIn)) inSel.value = keepIn;
   else inSel.selectedIndex = 0;
   inSel.disabled = false;
+  const keepIn2 = in2Sel.value;
+  in2Sel.innerHTML = '<option value="">不使用</option>' + usable.map((d,i)=>`<option value="${d.deviceId}">${d.label||'輸入裝置 '+(i+1)}</option>`).join('');
+  in2Sel.value = usable.some(d=>d.deviceId===keepIn2) ? keepIn2 : '';
+  in2Sel.disabled = !usable.length;
   if (typeof player.setSinkId === 'function' && outs.length){
     const keepOut = outSel.value;
     outSel.innerHTML = outs.map((d,i)=>`<option value="${d.deviceId}">${d.label||'輸出裝置 '+(i+1)}</option>`).join('');
@@ -591,10 +605,29 @@ async function start(){
       if (id && [...inSel.options].some(o=>o.value===id)) inSel.value = id;
     }
     const src = ctx.createMediaStreamSource(stream);
+    // 第二輸入來源：另開一條收音，和第一來源混在一起再進後面的處理
+    let mixed = src; in2Msg.hidden = true;
+    if (in2Sel.value && in2Sel.value === inSel.value){
+      in2Msg.textContent = '第二輸入來源和第一個相同，已略過。'; in2Msg.hidden = false;
+    } else if (in2Sel.value){
+      try{
+        stream2 = await navigator.mediaDevices.getUserMedia({ audio: Object.assign({}, constraints.audio, {deviceId:{exact: in2Sel.value}}) });
+        const src2 = ctx.createMediaStreamSource(stream2);
+        gain2Node = ctx.createGain(); gain2Node.gain.value = gain2El.value/100;
+        analyser2 = ctx.createAnalyser(); analyser2.fftSize = 1024;
+        mixed = ctx.createGain();
+        src.connect(mixed); src2.connect(gain2Node); gain2Node.connect(mixed); gain2Node.connect(analyser2);
+        const t2 = stream2.getAudioTracks()[0];
+        t2 && t2.addEventListener('ended', ()=>{ in2Msg.textContent = '第二輸入來源中斷了，目前只剩第一來源在收音。'; in2Msg.hidden = false; });
+      }catch(e){
+        stream2 = null; gain2Node = null; analyser2 = null; mixed = src;
+        in2Msg.textContent = '第二輸入來源打不開，目前只用第一來源收音。請檢查它的連線後重新選一次。'; in2Msg.hidden = false;
+      }
+    }
     gainNode = ctx.createGain(); gainNode.gain.value = gainEl.value/100;
     analyser = ctx.createAnalyser(); analyser.fftSize = 1024;
     const dest = ctx.createMediaStreamDestination();
-    let node = src;
+    let node = mixed;
     if (voiceChk.checked){
       const hp = ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=110; hp.Q.value=0.7;
       const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=7500; lp.Q.value=0.7;
@@ -633,13 +666,22 @@ async function start(){
     diagTimer = setInterval(()=>{
       if (!stream) return;
       const t = stream.getAudioTracks()[0];
+      let second = '';
+      if (stream2 && analyser2){
+        const b = new Float32Array(analyser2.fftSize); analyser2.getFloatTimeDomainData(b);
+        let q = 0; for (let i=0;i<b.length;i++) q += b[i]*b[i];
+        lastDb2 = 20*Math.log10(Math.sqrt(q/b.length)||1e-8);
+        const t2 = stream2.getAudioTracks()[0];
+        second = `｜第二來源：${t2&&t2.label?t2.label:'（名稱不明）'} ${lastDb2.toFixed(0)} dB`;
+      }
       document.getElementById('diag').textContent =
-        `裝置：${t&&t.label?t.label:'（名稱不明）'}｜軌道：${t?t.readyState:'無'}${t&&t.muted?'（被系統靜音）':''}｜音訊引擎：${ctx?ctx.state:'無'}｜目前音量：${lastDb.toFixed(0)} dB`;
+        `裝置：${t&&t.label?t.label:'（名稱不明）'}｜軌道：${t?t.readyState:'無'}${t&&t.muted?'（被系統靜音）':''}｜音訊引擎：${ctx?ctx.state:'無'}｜目前音量：${lastDb.toFixed(0)} dB${second}`;
       if (ctx && ctx.state==='suspended') ctx.resume();
     }, 500);
     try{ if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); }catch(e){}
     startBtn.disabled = true; stopBtn.disabled = false; $('muteBtn').disabled = false; renderPause();
-    const devName = track && track.label ? track.label : '系統預設麥克風';
+    const t2n = stream2 && stream2.getAudioTracks()[0];
+    const devName = (track && track.label ? track.label : '系統預設麥克風') + (t2n ? '」和「' + (t2n.label || '第二輸入來源') : '');
     setStatus(`收音中：正在使用「${devName}」。對著麥克風說話，指示條應該會跳動。`, 'live');
     silentSince = performance.now();
     track && track.addEventListener('ended', ()=>setStatus('輸入裝置中斷了，請檢查連線後重新開始。','err'));
@@ -657,6 +699,8 @@ async function start(){
 function stop(updateUI=true){
   cancelAnimationFrame(raf); clearInterval(diagTimer);
   if (stream) stream.getTracks().forEach(t=>t.stop());
+  if (stream2) stream2.getTracks().forEach(t=>t.stop());
+  stream2 = null; gain2Node = null; analyser2 = null;
   if (ctx) ctx.close();
   stream = ctx = null; gateNode = null; player.srcObject = null; fill.style.width='100%';
   if (wakeLock) { wakeLock.release().catch(()=>{}); wakeLock=null; }
@@ -687,6 +731,8 @@ function meter(){
 startBtn.addEventListener('click', start);
 stopBtn.addEventListener('click', ()=>stop(true));
 inSel.addEventListener('change', ()=>{ if (stream) start(); });
+in2Sel.addEventListener('change', ()=>{ if (stream) start(); });
+gain2El.addEventListener('input', ()=>{ $('gain2Val').textContent = gain2El.value+'%'; if (gain2Node) gain2Node.gain.value = gain2El.value/100; });
 rawChk.addEventListener('change', ()=>{ if (stream) start(); });
 const levelChk = $('levelChk'), voiceChk = $('voiceChk'), gateThr = $('gateThr'), gateVal = $('gateVal'), calBtn = $('calBtn'), calMsg = $('calMsg'), gateBox = $('gateBox');
 function syncGateUI(){ gateBox.style.opacity = voiceChk.checked ? 1 : .45; calBtn.disabled = !voiceChk.checked; gateThr.disabled = !voiceChk.checked; levelChk.disabled = !voiceChk.checked; levelChk.closest('.check').style.opacity = voiceChk.checked ? 1 : .45; }
