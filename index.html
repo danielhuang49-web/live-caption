@@ -233,6 +233,9 @@
   .pb-sub{color:var(--muted)}
   .pc-dot{background:var(--ink)}
   .present-ctl button{color:var(--ink)}
+  .src-meter{display:inline-block;vertical-align:middle;width:min(260px,60%);height:6px;margin-top:12px;background:var(--track);overflow:hidden}
+  .src-meter i{display:block;height:100%;width:0;background:var(--ok);transition:width 80ms linear}
+  .src-db{margin-left:12px;font-family:var(--caps);font-size:.78rem;color:var(--muted);vertical-align:middle;position:relative;top:5px}
   /* 兩種投影用顏色區分：翻成中文＝綠，翻成英文＝紅 */
   :root{--to-zh:#6fb583; --to-en:#d9604a}
   #presentZh{border-color:var(--to-zh);color:var(--to-zh)}
@@ -318,6 +321,7 @@
           <div class="k"><label for="inSel">輸入來源</label></div>
           <div class="v">
             <select id="inSel" disabled><option>開始收音後會列出可用裝置</option></select>
+            <div class="src-meter" aria-hidden="true"><i id="src1Bar"></i></div><span class="src-db" id="src1Db">—</span>
             <span class="hint">接混音器時，選 USB 音訊介面的名稱。</span>
           </div>
         </div>
@@ -325,8 +329,9 @@
           <div class="k"><label for="in2Sel">第二輸入來源</label><span class="gainval" id="gain2Val">100%</span></div>
           <div class="v">
             <select id="in2Sel" disabled><option value="">不使用</option></select>
+            <div class="src-meter" aria-hidden="true"><i id="src2Bar"></i></div><span class="src-db" id="src2Db">—</span>
             <input type="range" id="gain2" min="0" max="200" value="100" step="5" style="margin-top:14px" aria-label="第二輸入來源音量">
-            <span class="hint">想同時用兩支麥克風時才選，兩邊的聲音會混在一起送出。兩支要相隔 4 公尺以上、各收各的區域（例如一支放講台、一支放教室中間）；放太近聲音會變糊。滑桿調整第二來源的音量。</span>
+            <span class="hint">想同時用兩支麥克風時才選，兩邊的聲音會混在一起送出。兩支要相隔 4 公尺以上、各收各的區域（例如一支放講台、一支放教室中間）；放太近聲音會變糊。滑桿調整第二來源的音量。兩個選單下方各有一條小音量條，可以看出哪一支有收到聲音。</span>
             <span class="hint" id="in2Msg" hidden></span>
           </div>
         </div>
@@ -548,7 +553,7 @@ let gateNode = null, calibrating = null, sendNode = null, paused = false;
 const baseTitle = document.title;
 if (location.protocol==='file:') document.getElementById('fileWarn').hidden=false;
 let diagTimer;
-let stream2 = null, gain2Node = null, analyser2 = null, lastDb2 = -120;
+let stream2 = null, gain2Node = null, analyser2 = null, analyser1 = null, lastDb2 = -120, srcTimer;
 let ctx, stream, gainNode, analyser, raf, wakeLock, silentSince = 0, warned = false, lastDb = -120, shown = 0;
 
 function setStatus(text, cls){ statusEl.textContent=text; statusEl.className='status '+cls; }
@@ -592,9 +597,10 @@ async function start(){
   ctx.resume();
   try{
     const raw = rawChk.checked;
+    const dual = !!in2Sel.value && in2Sel.value !== inSel.value;
     const constraints = { audio:{
       deviceId: inSel.value && !inSel.disabled ? {exact: inSel.value} : undefined,
-      echoCancellation: !raw, noiseSuppression: !raw, autoGainControl: !raw && !(voiceChk.checked && levelChk.checked),
+      echoCancellation: !raw && !dual, noiseSuppression: !raw, autoGainControl: !raw && !(voiceChk.checked && levelChk.checked),
       channelCount: 1
     }};
     stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -605,6 +611,7 @@ async function start(){
       if (id && [...inSel.options].some(o=>o.value===id)) inSel.value = id;
     }
     const src = ctx.createMediaStreamSource(stream);
+    analyser1 = ctx.createAnalyser(); analyser1.fftSize = 1024; src.connect(analyser1);
     // 第二輸入來源：另開一條收音，和第一來源混在一起再進後面的處理
     let mixed = src; in2Msg.hidden = true;
     if (in2Sel.value && in2Sel.value === inSel.value){
@@ -662,6 +669,7 @@ async function start(){
     await ctx.resume();
 
     meter();
+    clearInterval(srcTimer); srcTimer = setInterval(srcMeters, 100);
     clearInterval(diagTimer);
     diagTimer = setInterval(()=>{
       if (!stream) return;
@@ -696,11 +704,23 @@ async function start(){
   }
 }
 
+function srcLevel(an){
+  const b = new Float32Array(an.fftSize); an.getFloatTimeDomainData(b);
+  let q = 0; for (let i=0;i<b.length;i++) q += b[i]*b[i];
+  return 20*Math.log10(Math.sqrt(q/b.length)||1e-8);
+}
+function srcMeters(){
+  [[analyser1,'src1'],[stream2 ? analyser2 : null,'src2']].forEach(([an,id])=>{
+    const db = an ? srcLevel(an) : null;
+    $(id+'Bar').style.width = db===null ? '0' : Math.max(0, Math.min(100, (db+60)/60*100))+'%';
+    $(id+'Db').textContent = db===null ? '—' : (db < -70 ? '沒有聲音' : db.toFixed(0)+' dB');
+  });
+}
 function stop(updateUI=true){
-  cancelAnimationFrame(raf); clearInterval(diagTimer);
+  cancelAnimationFrame(raf); clearInterval(diagTimer); clearInterval(srcTimer);
   if (stream) stream.getTracks().forEach(t=>t.stop());
   if (stream2) stream2.getTracks().forEach(t=>t.stop());
-  stream2 = null; gain2Node = null; analyser2 = null;
+  stream2 = null; gain2Node = null; analyser2 = null; analyser1 = null; srcMeters();
   if (ctx) ctx.close();
   stream = ctx = null; gateNode = null; player.srcObject = null; fill.style.width='100%';
   if (wakeLock) { wakeLock.release().catch(()=>{}); wakeLock=null; }
