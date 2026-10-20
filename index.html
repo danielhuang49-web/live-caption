@@ -397,6 +397,18 @@
         <div class="group">
           <h3 class="group-title"><span class="num">03</span>字幕與輸出</h3>
         <div class="field">
+          <div class="k"><label for="dualSel">雙視窗切換</label></div>
+          <div class="v">
+            <select id="dualSel">
+              <option value="">不使用</option>
+              <option value="zh">這個視窗負責：英翻中（按 P 送出）</option>
+              <option value="en">這個視窗負責：中翻英（按 E 送出）</option>
+            </select>
+            <span class="hint">開兩個 Chrome 視窗，各自啟用 ViiTor 並設不同方向，兩邊這裡各選一個。之後在任一視窗按 P，只有英翻中的視窗送出聲音；按 E，只有中翻英的視窗送出；按 M 兩邊一起暫停或恢復。</span>
+            <span class="hint" id="dualMsg" hidden></span>
+          </div>
+        </div>
+        <div class="field">
           <div class="k">繁體轉換</div>
           <div class="v">
             <div class="check">
@@ -456,6 +468,18 @@
             <li><b>英文投影（E）</b>：中文演講用。ViiTor 設 ZH → EN，畫面只有英文，紅色。</li>
           </ul>
           投影中按另一個鍵可以直接切換；右下角會提醒 ViiTor 該設哪個方向（這個頁面無法幫你切換 ViiTor）。</li>
+      </ol>
+    </details>
+
+    <details>
+      <summary>雙視窗手動切換中英（選用）</summary>
+      <ol>
+        <li>在 Chrome 開兩個<b>獨立視窗</b>（不是兩個分頁），都打開這個網址。</li>
+        <li>視窗一：「設定 › 03 › 雙視窗切換」選「英翻中」，啟用 ViiTor 並設 EN → ZH。</li>
+        <li>視窗二：選「中翻英」，啟用 ViiTor 並設 ZH → EN。</li>
+        <li>兩個視窗都按「開始收音」，輸入來源選同一支麥克風。</li>
+        <li>講者說英文時按 <b>P</b>，說中文時按 <b>E</b>；休息時按 <b>M</b> 兩邊一起暫停，再按一次 M 回到暫停前的那一邊。</li>
+        <li>按鍵要在這兩個視窗其中一個有焦點時才有效；剛點過 ViiTor 的話，先在頁面空白處點一下。視窗標題會顯示哪一邊「🔴 送出中」。</li>
       </ol>
     </details>
 
@@ -551,6 +575,35 @@ registerProcessor('voice-gate', VoiceGate);`;
 const gateURL = URL.createObjectURL(new Blob([GATE_SRC], {type:'application/javascript'}));
 let gateNode = null, calibrating = null, sendNode = null, paused = false;
 const baseTitle = document.title;
+// ===== 雙視窗切換：兩個視窗用 BroadcastChannel 互相通知，同一時間只有一邊送出 =====
+const dualSel = $('dualSel'), dualMsg = $('dualMsg');
+const dualBC = 'BroadcastChannel' in window ? new BroadcastChannel('live-caption-dual') : null;
+let dualLive = null, dualLast = null;
+try{ dualLive = localStorage.getItem('dualLive') || null; }catch(e){}
+try{ dualSel.value = sessionStorage.getItem('dualRole') || ''; }catch(e){}
+function dualRole(){ return dualSel.value || null; }
+function titleBase(){ const r = dualRole(); return (r==='zh' ? '英翻中｜' : r==='en' ? '中翻英｜' : '') + baseTitle; }
+function applyDual(live, broadcast){
+  if (live) dualLast = live;
+  dualLive = live;
+  try{ localStorage.setItem('dualLive', live || ''); }catch(e){}
+  if (broadcast && dualBC) dualBC.postMessage({live});
+  const role = dualRole();
+  if (role){
+    const p = live !== role;
+    if (paused !== p){ paused = p; if (sendNode && ctx) sendNode.gain.setTargetAtTime(paused ? 0 : 1, ctx.currentTime, 0.02); }
+    renderPause();
+  }
+  renderDual();
+}
+function renderDual(){
+  if (!dualRole()){ dualMsg.hidden = true; document.title = stream ? document.title : titleBase(); return; }
+  dualMsg.hidden = false;
+  dualMsg.textContent = !dualBC ? '這個瀏覽器不支援雙視窗切換，請用 Chrome。'
+    : '目前送出：' + (dualLive==='zh' ? '英翻中的視窗' : dualLive==='en' ? '中翻英的視窗' : '兩邊都暫停') + '。';
+  if (!stream) document.title = titleBase();
+}
+if (dualBC) dualBC.onmessage = e => applyDual(e.data && e.data.live || null, false);
 if (location.protocol==='file:') document.getElementById('fileWarn').hidden=false;
 let diagTimer;
 let stream2 = null, gain2Node = null, analyser2 = null, analyser1 = null, lastDb2 = -120, srcTimer;
@@ -593,6 +646,7 @@ async function listDevices(){
 
 async function start(){
   stop(false);
+  if (dualRole()) paused = dualLive !== dualRole();
   ctx = new (window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});
   ctx.resume();
   try{
@@ -724,7 +778,7 @@ function stop(updateUI=true){
   if (ctx) ctx.close();
   stream = ctx = null; gateNode = null; player.srcObject = null; fill.style.width='100%';
   if (wakeLock) { wakeLock.release().catch(()=>{}); wakeLock=null; }
-  if (updateUI){ startBtn.disabled=false; stopBtn.disabled=true; $('muteBtn').disabled=true; paused=false; renderPause(); document.title=baseTitle; setStatus('已停止。','idle'); }
+  if (updateUI){ startBtn.disabled=false; stopBtn.disabled=true; $('muteBtn').disabled=true; paused=false; renderPause(); document.title=titleBase(); setStatus('已停止。','idle'); }
 }
 
 function meter(){
@@ -752,6 +806,8 @@ startBtn.addEventListener('click', start);
 stopBtn.addEventListener('click', ()=>stop(true));
 inSel.addEventListener('change', ()=>{ if (stream) start(); });
 in2Sel.addEventListener('change', ()=>{ if (stream) start(); });
+dualSel.addEventListener('change', ()=>{ try{ sessionStorage.setItem('dualRole', dualSel.value); }catch(e){} if (dualRole()) applyDual(dualLive, false); else { renderDual(); renderPause(); } });
+renderDual();
 gain2El.addEventListener('input', ()=>{ $('gain2Val').textContent = gain2El.value+'%'; if (gain2Node) gain2Node.gain.value = gain2El.value/100; });
 rawChk.addEventListener('change', ()=>{ if (stream) start(); });
 const levelChk = $('levelChk'), voiceChk = $('voiceChk'), gateThr = $('gateThr'), gateVal = $('gateVal'), calBtn = $('calBtn'), calMsg = $('calMsg'), gateBox = $('gateBox');
@@ -797,9 +853,10 @@ function renderPause(){
   const pm = document.getElementById('pcMute'); if (pm) pm.textContent = document.body.classList.contains('present-en') ? (paused ? 'Resume (M)' : 'Pause (M)') : b.textContent;
   document.body.classList.toggle('live', !!stream && !paused);
   document.body.classList.toggle('paused', paused);
-  if (stream) document.title = (paused ? '⏸ 暫停｜' : '🔴 送出中｜') + baseTitle;
+  if (stream) document.title = (paused ? '⏸ 暫停｜' : '🔴 送出中｜') + titleBase();
 }
 function togglePause(){
+  if (dualRole()){ applyDual(dualLive ? null : (dualLast || dualRole()), true); return; }
   if (!stream) return;
   paused = !paused;
   if (sendNode && ctx) sendNode.gain.setTargetAtTime(paused ? 0 : 1, ctx.currentTime, 0.02);
@@ -827,6 +884,7 @@ window.addEventListener('keydown', e=>{
   if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
   // 按同一個鍵離開；在另一種投影中按則直接切換
   const mode = e.code==='KeyP' ? 'zh' : e.code==='KeyE' ? 'en' : null;
+  if (mode && dualRole()){ if (el && el.tagName==='SELECT') el.blur(); e.preventDefault(); applyDual(mode, true); return; }
   if (mode){ if (el && el.tagName==='SELECT') el.blur(); e.preventDefault(); setPresent(document.body.classList.contains('present-'+mode) ? null : mode); }
   else if (e.key==='Escape' && document.body.classList.contains('present')) setPresent(null);
 }, true);
